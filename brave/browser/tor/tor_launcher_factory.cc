@@ -63,7 +63,7 @@ void TorLauncherFactory::LaunchInLauncherThread() {
   base::FilePath user_data_dir;
   base::FilePath tor_data_path;
   base::FilePath tor_watch_path;
-  PathService::Get(chrome::DIR_USER_DATA, &user_data_dir);
+  base::PathService::Get(chrome::DIR_USER_DATA, &user_data_dir);
   if (!user_data_dir.empty()) {
     tor_data_path = user_data_dir.Append(FILE_PATH_LITERAL("tor"))
       .Append(FILE_PATH_LITERAL("data"));

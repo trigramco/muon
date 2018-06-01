@@ -152,13 +152,14 @@ void ShowDialog(const file_dialog::DialogSettings& settings,
 
   base::FilePath default_path = settings.default_path;
   if (default_path.empty()) {
-    if (!PathService::Get(chrome::DIR_DEFAULT_DOWNLOADS, &default_path)) {
+    if (!base::PathService::Get(chrome::DIR_DEFAULT_DOWNLOADS, &default_path)) {
       NOTREACHED();
     }
   }
   // This is only useful on platforms that support
   // DIR_DEFAULT_DOWNLOADS_SAFE.
-  if (!PathService::Get(chrome::DIR_DEFAULT_DOWNLOADS_SAFE, &default_path)) {
+  if (!base::PathService::Get(chrome::DIR_DEFAULT_DOWNLOADS_SAFE,
+                              &default_path)) {
     NOTREACHED();
   }
   file_type_info.include_all_files = settings.include_all_files;

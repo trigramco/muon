@@ -8,6 +8,7 @@
 #include <string>
 
 #include "brave/utility/importer/brave_external_process_importer_bridge.h"
+#include "base/environment.h"
 #include "base/files/file_util.h"
 #include "base/json/json_reader.h"
 #include "base/macros.h"

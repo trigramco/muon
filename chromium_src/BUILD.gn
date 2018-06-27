@@ -459,6 +459,8 @@ source_set("browser") {
       "//chrome/browser/ui/certificate_viewer_mac.h",
       "//chrome/browser/ui/certificate_viewer_mac.mm",
       "chrome/browser/ui/certificate_viewer_mac_views.mm",
+      "//chrome/browser/ui/views_mode_controller.cc",
+      "//chrome/browser/ui/views_mode_controller.h",
     ]
     libs = [
       "SecurityInterface.framework",

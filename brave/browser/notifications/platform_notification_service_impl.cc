@@ -20,10 +20,61 @@
 #include "content/public/common/notification_resources.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 
+#include "atom/common/api/event_emitter_caller.h"
+#include "atom/common/native_mate_converters/callback.h"
+#include "atom/common/native_mate_converters/content_converter.h"
+#include "atom/common/native_mate_converters/string16_converter.h"
+#include "atom/common/node_includes.h"
+#include "native_mate/converter.h"
+#include "native_mate/dictionary.h"
 
 namespace brave {
 
 namespace {
+
+class NotificationDelegate : public brightray::NotificationDelegate {
+ public:
+  NotificationDelegate() : brightray::NotificationDelegate() {}
+  explicit NotificationDelegate(const std::string& notification_id)
+    : brightray::NotificationDelegate(notification_id) {}
+  virtual ~NotificationDelegate() {}
+
+  void EmitEvent(const std::string& event) {
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    if (!isolate) {
+      return;
+    }
+
+    node::Environment* env = node::Environment::GetCurrent(isolate);
+    if (!env) {
+      return;
+    }
+
+    mate::EmitEvent(isolate, env->process_object(), event, notificationId());
+  }
+
+  void NotificationDestroyed() override {
+    EmitEvent("notification-destroyed");
+  }
+
+  void NotificationFailed() override {
+    EmitEvent("notification-failed");
+  }
+
+  void NotificationClick() override {
+    EmitEvent("notification-clicked");
+  }
+
+  void NotificationClosed() override {
+    EmitEvent("notification-closed");
+  }
+
+  void NotificationDisplayed() override {
+    EmitEvent("notification-displayed");
+  }
+
+DISALLOW_COPY_AND_ASSIGN(NotificationDelegate);
+};
 
 void OnPermissionResponse(const base::Callback<void(bool)>& callback,
                           blink::mojom::PermissionStatus status) {
@@ -86,7 +137,7 @@ void PlatformNotificationServiceImpl::DisplayNotification(
     const content::PlatformNotificationData& notification_data,
     const content::NotificationResources& notification_resources) {
   brightray::NotificationDelegate* delegate =
-      new brightray::NotificationDelegate(notification_id);
+      new NotificationDelegate(notification_id);
   auto callback = base::Bind(&OnWebNotificationAllowed,
              BraveContentBrowserClient::Get(),
              notification_resources.notification_icon,

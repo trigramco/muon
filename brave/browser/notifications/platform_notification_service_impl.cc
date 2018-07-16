@@ -34,9 +34,13 @@ namespace {
 
 class NotificationDelegate : public brightray::NotificationDelegate {
  public:
-  NotificationDelegate() : brightray::NotificationDelegate() {}
-  explicit NotificationDelegate(const std::string& notification_id)
-    : brightray::NotificationDelegate(notification_id) {}
+  NotificationDelegate()
+    : brightray::NotificationDelegate()
+    , render_process_id_(-1) {}
+  explicit NotificationDelegate(const std::string& notification_id,
+   int render_process_id)
+    : brightray::NotificationDelegate(notification_id)
+    , render_process_id_(render_process_id) {}
   virtual ~NotificationDelegate() {}
 
   void EmitEvent(const std::string& event) {
@@ -50,7 +54,8 @@ class NotificationDelegate : public brightray::NotificationDelegate {
       return;
     }
 
-    mate::EmitEvent(isolate, env->process_object(), event, notificationId());
+    mate::EmitEvent(isolate, env->process_object(), event, notificationId(),
+      render_process_id_);
   }
 
   void NotificationDestroyed() override {
@@ -73,7 +78,10 @@ class NotificationDelegate : public brightray::NotificationDelegate {
     EmitEvent("notification-displayed");
   }
 
-DISALLOW_COPY_AND_ASSIGN(NotificationDelegate);
+ private:
+  int render_process_id_;
+
+  DISALLOW_COPY_AND_ASSIGN(NotificationDelegate);
 };
 
 void OnPermissionResponse(const base::Callback<void(bool)>& callback,
@@ -135,9 +143,10 @@ void PlatformNotificationServiceImpl::DisplayNotification(
     const std::string& notification_id,
     const GURL& origin,
     const content::PlatformNotificationData& notification_data,
-    const content::NotificationResources& notification_resources) {
+    const content::NotificationResources& notification_resources,
+    int render_process_id) {
   brightray::NotificationDelegate* delegate =
-      new NotificationDelegate(notification_id);
+      new NotificationDelegate(notification_id, render_process_id);
   auto callback = base::Bind(&OnWebNotificationAllowed,
              BraveContentBrowserClient::Get(),
              notification_resources.notification_icon,

@@ -39,8 +39,7 @@ class PlatformNotificationServiceImpl
       const std::string& notification_id,
       const GURL& origin,
       const content::PlatformNotificationData& notification_data,
-      const content::NotificationResources& notification_resources,
-      int render_process_id) override;
+      const content::NotificationResources& notification_resources) override;
   void DisplayPersistentNotification(
       content::BrowserContext* browser_context,
       const std::string& notification_id,

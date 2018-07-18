@@ -65,8 +65,7 @@ void PlatformNotificationService::DisplayNotification(
     const std::string& notification_id,
     const GURL& origin,
     const content::PlatformNotificationData& notification_data,
-    const content::NotificationResources& notification_resources,
-    int render_process_id) {
+    const content::NotificationResources& notification_resources) {
   NotificationDelegate* delegate =
       new NotificationDelegate(notification_id);
   browser_client_->WebNotificationAllowed(

@@ -8,6 +8,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <map>
 
 #include "brave/browser/brave_content_browser_client.h"
 #include "brave/browser/brave_permission_manager.h"
@@ -20,6 +21,7 @@
 #include "content/public/common/notification_resources.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 
+#include "atom/browser/extensions/tab_helper.h"
 #include "atom/common/api/event_emitter_caller.h"
 #include "atom/common/native_mate_converters/callback.h"
 #include "atom/common/native_mate_converters/content_converter.h"
@@ -32,11 +34,23 @@ namespace brave {
 
 namespace {
 
+typedef std::map<content::ResourceContext*, int> ResourceContextIntMap;
+
 class NotificationDelegate : public brightray::NotificationDelegate {
  public:
-  NotificationDelegate() : brightray::NotificationDelegate() {}
-  explicit NotificationDelegate(const std::string& notification_id)
-    : brightray::NotificationDelegate(notification_id) {}
+  NotificationDelegate()
+    : brightray::NotificationDelegate(), render_process_id_(-1) {}
+  explicit NotificationDelegate(const std::string& notification_id,
+    content::ResourceContext* resource_context)
+    : brightray::NotificationDelegate(notification_id),
+        render_process_id_(-1) {
+      ResourceContextIntMap::iterator found =
+          sContextRenderProcessIdMap.find(resource_context);
+      if (found != sContextRenderProcessIdMap.end()) {
+        render_process_id_ = found->second;
+        sContextRenderProcessIdMap.erase(found);
+      }
+    }
   virtual ~NotificationDelegate() {}
 
   void EmitEvent(const std::string& event) {
@@ -50,7 +64,16 @@ class NotificationDelegate : public brightray::NotificationDelegate {
       return;
     }
 
-    mate::EmitEvent(isolate, env->process_object(), event, notificationId());
+    brightray::BrowserClient* const browser_client =
+        BraveContentBrowserClient::Get();
+    brave::BraveContentBrowserClient* const brave_browser_client =
+        static_cast<brave::BraveContentBrowserClient*>(browser_client);
+    content::WebContents* const web_contents =
+        brave_browser_client->GetWebContentsFromProcessID(render_process_id_);
+    int tab_id = extensions::TabHelper::IdForTab(web_contents);
+
+    mate::EmitEvent(isolate, env->process_object(), event,
+        notificationId(), tab_id);
   }
 
   void NotificationDestroyed() override {
@@ -73,8 +96,20 @@ class NotificationDelegate : public brightray::NotificationDelegate {
     EmitEvent("notification-displayed");
   }
 
+  static void MapResourceContext(content::ResourceContext* context,
+      int render_process_id) {
+    sContextRenderProcessIdMap[context] = render_process_id;
+  }
+
+  static ResourceContextIntMap sContextRenderProcessIdMap;
+
+ private:
+  int render_process_id_;
+
 DISALLOW_COPY_AND_ASSIGN(NotificationDelegate);
 };
+
+ResourceContextIntMap NotificationDelegate::sContextRenderProcessIdMap;
 
 void OnPermissionResponse(const base::Callback<void(bool)>& callback,
                           blink::mojom::PermissionStatus status) {
@@ -127,6 +162,7 @@ blink::mojom::PermissionStatus
     content::ResourceContext* resource_context,
     const GURL& origin,
     int render_process_id) {
+  NotificationDelegate::MapResourceContext(resource_context, render_process_id);
   return blink::mojom::PermissionStatus::GRANTED;
 }
 
@@ -136,8 +172,10 @@ void PlatformNotificationServiceImpl::DisplayNotification(
     const GURL& origin,
     const content::PlatformNotificationData& notification_data,
     const content::NotificationResources& notification_resources) {
+  content::ResourceContext* resource_context =
+      browser_context->GetResourceContext();
   brightray::NotificationDelegate* delegate =
-      new NotificationDelegate(notification_id);
+      new NotificationDelegate(notification_id, resource_context);
   auto callback = base::Bind(&OnWebNotificationAllowed,
              BraveContentBrowserClient::Get(),
              notification_resources.notification_icon,

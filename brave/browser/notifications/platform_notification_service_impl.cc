@@ -41,9 +41,11 @@ class NotificationDelegate : public brightray::NotificationDelegate {
   NotificationDelegate()
     : brightray::NotificationDelegate(), render_process_id_(-1) {}
   explicit NotificationDelegate(const std::string& notification_id,
-    content::ResourceContext* resource_context)
+    content::ResourceContext* resource_context,
+    const content::PlatformNotificationData& platform_notification_data)
     : brightray::NotificationDelegate(notification_id),
-        render_process_id_(-1) {
+        render_process_id_(-1),
+        platform_notification_data_(platform_notification_data) {
       ResourceContextIntMap::iterator found =
           sContextRenderProcessIdMap.find(resource_context);
       if (found != sContextRenderProcessIdMap.end()) {
@@ -73,7 +75,8 @@ class NotificationDelegate : public brightray::NotificationDelegate {
     int tab_id = extensions::TabHelper::IdForTab(web_contents);
 
     mate::EmitEvent(isolate, env->process_object(), event,
-        notificationId(), tab_id);
+        notificationId(), tab_id, platform_notification_data_.title,
+        platform_notification_data_.body);
   }
 
   void NotificationDestroyed() override {
@@ -105,6 +108,7 @@ class NotificationDelegate : public brightray::NotificationDelegate {
 
  private:
   int render_process_id_;
+  content::PlatformNotificationData platform_notification_data_;
 
 DISALLOW_COPY_AND_ASSIGN(NotificationDelegate);
 };
@@ -175,7 +179,8 @@ void PlatformNotificationServiceImpl::DisplayNotification(
   content::ResourceContext* resource_context =
       browser_context->GetResourceContext();
   brightray::NotificationDelegate* delegate =
-      new NotificationDelegate(notification_id, resource_context);
+      new NotificationDelegate(notification_id, resource_context,
+      notification_data);
   auto callback = base::Bind(&OnWebNotificationAllowed,
              BraveContentBrowserClient::Get(),
              notification_resources.notification_icon,
